@@ -1,0 +1,3 @@
+Center - X: 946, Y: 884
+Center - X: 586, Y: 546
+Center - X: 608, Y: 554
