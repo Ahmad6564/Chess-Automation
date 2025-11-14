@@ -1,7 +1,7 @@
 """
 Chess Vision Agent - Main Orchestrator
 
-An autonomous chess-playing agent that combines computer vision (LLaVA),
+An autonomous chess-playing agent that combines computer vision (UI-TARS),
 chess reasoning (Stockfish), and GUI automation to play chess like a human.
 """
 

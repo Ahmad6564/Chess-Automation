@@ -96,8 +96,8 @@ python main.py
 - Image normalization (512x512 default)
 
 **piece_recognition.py**
-- LLaVA model integration (llava-hf/llava-v1.6-mistral-7b-hf)
-- Support for larger 34B model
+- UI-TARS model integration (ByteDance-Seed/UI-TARS-1.5-7B)
+- Efficient 7B parameter model designed for UI understanding
 - Structured JSON output parsing
 - Piece position detection (square + piece type + color)
 
@@ -278,7 +278,7 @@ All settings in `config.yaml`:
 ## 🎯 Key Features
 
 ✅ **Vision-Based Perception** - Understands board from images only  
-✅ **LLaVA Integration** - Advanced piece recognition  
+✅ **UI-TARS Integration** - Efficient 7B parameter model for piece recognition  
 ✅ **Stockfish Reasoning** - World-class chess calculation  
 ✅ **Human-Like Behavior** - Natural delays and movements  
 ✅ **Platform Agnostic** - Works on desktop apps and web  
@@ -328,7 +328,7 @@ Tests include:
 
 ## 📝 Notes
 
-- First run will download the LLaVA model (~15GB for 7B model)
+- First run will download the UI-TARS model (~7B parameters, more efficient than LLaVA)
 - GPU strongly recommended for vision model
 - CPU mode supported but slower
 - Move mouse to top-left corner to abort (FailSafe)
@@ -341,7 +341,7 @@ Tests include:
 
 All requested features have been implemented according to your specifications:
 
-- ✅ Complete vision pipeline with LLaVA
+- ✅ Complete vision pipeline with UI-TARS (7B efficient model)
 - ✅ Stockfish integration
 - ✅ Human-like automation
 - ✅ Modular architecture

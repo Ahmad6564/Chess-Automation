@@ -1,40 +1,39 @@
 """
-Piece recognition module using LLaVA vision model.
+Piece recognition module using UI-TARS vision model.
 """
 
 import torch
 import numpy as np
 from PIL import Image
-from transformers import AutoProcessor, LlavaForConditionalGeneration
+from transformers import AutoProcessor, AutoModelForCausalLM
 from typing import Dict, Optional
 import json
 import re
 
 
 class PieceRecognizer:
-    """Uses LLaVA model to recognize chess pieces on the board."""
+    """Uses UI-TARS model to recognize chess pieces on the board."""
     
-    def __init__(self, model_name: str = "llava-hf/llava-v1.6-mistral-7b-hf"):
+    def __init__(self, model_name: str = "ByteDance-Seed/UI-TARS-1.5-7B"):
         """
-        Initialize the LLaVA model for piece recognition.
+        Initialize the UI-TARS model for piece recognition.
         
         Args:
             model_name: HuggingFace model identifier
-                       Options: 
-                       - llava-hf/llava-v1.6-mistral-7b-hf (smaller, faster)
-                       - llava-hf/llava-v1.6-34b-hf (larger, more accurate)
+                       Default: ByteDance-Seed/UI-TARS-1.5-7B (7B parameters, efficient)
         """
         self.model_name = model_name
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"Loading LLaVA model: {model_name} on {self.device}...")
+        print(f"Loading UI-TARS model: {model_name} on {self.device}...")
         
         # Load model and processor
-        self.processor = AutoProcessor.from_pretrained(model_name)
-        self.model = LlavaForConditionalGeneration.from_pretrained(
+        self.processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
+        self.model = AutoModelForCausalLM.from_pretrained(
             model_name,
             torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
             low_cpu_mem_usage=True,
-            device_map="auto" if self.device == "cuda" else None
+            device_map="auto" if self.device == "cuda" else None,
+            trust_remote_code=True
         )
         
         if self.device == "cpu":
@@ -44,29 +43,32 @@ class PieceRecognizer:
         
     def create_prompt(self) -> str:
         """
-        Create the prompt for LLaVA to recognize chess pieces.
+        Create the prompt for UI-TARS to recognize chess pieces.
         
         Returns:
             Formatted prompt string
         """
-        prompt = """USER: <image>
-You are analyzing a chess board image. The board has 8 rows (1-8) and 8 columns (a-h).
-Please identify all chess pieces and their positions.
+        prompt = """<image>
+Analyze this chess board image. The board has 8 rows (ranks 1-8) and 8 columns (files a-h).
+
+Identify all chess pieces and their positions on the board.
 
 For each piece, provide:
-- Square location (e.g., e2, d4)
-- Piece type (pawn, knight, bishop, rook, queen, king)
-- Color (white or black)
+- Square location using algebraic notation (e.g., e2, d4, a1)
+- Piece type: pawn, knight, bishop, rook, queen, or king
+- Color: white or black
 
-Return the information in JSON format like this:
+Return ONLY a JSON object in this exact format:
 {
   "a1": {"piece": "rook", "color": "white"},
   "b1": {"piece": "knight", "color": "white"},
   "e4": {"piece": "pawn", "color": "black"}
 }
 
-Only include squares that have pieces. Use lowercase for all values.
-ASSISTANT:"""
+Rules:
+- Only include squares that have pieces
+- Use lowercase for all values
+- Use standard algebraic notation for squares"""
         return prompt
     
     def recognize(self, board_image: np.ndarray) -> Dict[str, Dict[str, str]]:
@@ -94,23 +96,24 @@ ASSISTANT:"""
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
         
         # Generate response
-        print("Analyzing board with LLaVA...")
+        print("Analyzing board with UI-TARS...")
         with torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
                 max_new_tokens=1024,
                 do_sample=False,
                 temperature=0.2,
+                top_p=0.9,
             )
         
         # Decode response
         response = self.processor.decode(outputs[0], skip_special_tokens=True)
         
-        # Extract the assistant's response
-        if "ASSISTANT:" in response:
-            response = response.split("ASSISTANT:")[-1].strip()
+        # Extract the response (remove the prompt)
+        if prompt in response:
+            response = response.replace(prompt, "").strip()
         
-        print(f"LLaVA Response: {response[:200]}...")
+        print(f"UI-TARS Response: {response[:200]}...")
         
         # Parse the JSON response
         piece_map = self._parse_response(response)
@@ -119,10 +122,10 @@ ASSISTANT:"""
     
     def _parse_response(self, response: str) -> Dict[str, Dict[str, str]]:
         """
-        Parse LLaVA's text response into structured piece data.
+        Parse UI-TARS's text response into structured piece data.
         
         Args:
-            response: Raw text response from LLaVA
+            response: Raw text response from UI-TARS
         
         Returns:
             Parsed piece dictionary
@@ -178,13 +181,13 @@ ASSISTANT:"""
 
 
 def recognize_pieces(board_image: np.ndarray, 
-                    model_name: str = "llava-hf/llava-v1.6-mistral-7b-hf") -> Dict[str, Dict[str, str]]:
+                    model_name: str = "ByteDance-Seed/UI-TARS-1.5-7B") -> Dict[str, Dict[str, str]]:
     """
     Convenience function to recognize pieces.
     
     Args:
         board_image: Board image as numpy array
-        model_name: LLaVA model to use
+        model_name: UI-TARS model to use
     
     Returns:
         Piece dictionary

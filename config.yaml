@@ -22,12 +22,11 @@ stockfish:
   depth: 15  # Search depth
   time_limit: 1.0  # Time limit per move in seconds
 
-# LLaVA vision model settings
+# UI-TARS vision model settings
 vision_model:
-  # Options: 
-  # - llava-hf/llava-v1.6-mistral-7b-hf (smaller, faster)
-  # - llava-hf/llava-v1.6-34b-hf (larger, more accurate)
-  model_name: llava-hf/llava-v1.6-mistral-7b-hf
+  # ByteDance-Seed/UI-TARS-1.5-7B - Efficient 7B parameter model
+  # Designed for UI understanding, perfect for chess boards
+  model_name: ByteDance-Seed/UI-TARS-1.5-7B
   
   # Target board size for vision processing
   target_size: [512, 512]

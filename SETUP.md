@@ -6,7 +6,7 @@
 
 #### Prerequisites
 - Python 3.8 or higher
-- CUDA-capable GPU (recommended for LLaVA model)
+- CUDA-capable GPU (recommended for UI-TARS model)
 - Stockfish chess engine
 
 #### Install Python Dependencies
@@ -66,7 +66,7 @@ python main.py
 
 The agent will:
 1. Capture the current board position
-2. Recognize pieces using LLaVA
+2. Recognize pieces using UI-TARS
 3. Calculate the best move with Stockfish
 4. Execute the move with human-like behavior
 5. Wait for opponent's move
@@ -78,11 +78,9 @@ The agent will:
 
 ```yaml
 vision_model:
-  # Smaller, faster model (recommended for most users)
-  model_name: llava-hf/llava-v1.6-mistral-7b-hf
-  
-  # Larger, more accurate model (requires more VRAM)
-  # model_name: llava-hf/llava-v1.6-34b-hf
+  # UI-TARS 1.5 - 7B parameter model (efficient and accurate)
+  # Specifically designed for UI understanding tasks
+  model_name: ByteDance-Seed/UI-TARS-1.5-7B
   
   target_size: [512, 512]
 ```
@@ -183,15 +181,12 @@ game_loop:
 
 ### Issue: "CUDA out of memory"
 **Solution:**
-- Use the smaller model:
-  ```yaml
-  vision_model:
-    model_name: llava-hf/llava-v1.6-mistral-7b-hf
-  ```
+- The UI-TARS-1.5-7B model is already efficient with only 7B parameters
 - Or run on CPU (slower):
   ```python
   # The code automatically detects and uses CPU if CUDA unavailable
   ```
+- Close other GPU-intensive applications
 
 ### Issue: "Board not detected correctly"
 **Solution:**
@@ -203,11 +198,8 @@ game_loop:
 **Solution:**
 - Increase image quality/size
 - Use better lighting
-- Try the larger model (if you have enough VRAM):
-  ```yaml
-  vision_model:
-    model_name: llava-hf/llava-v1.6-34b-hf
-  ```
+- Ensure the board is clearly visible with good contrast
+- Make sure the board fills most of the defined region
 
 ## 📝 Logging
 
@@ -252,7 +244,7 @@ logging:
 ### Vision Module
 - `capture.py` - Screen capture
 - `board_detection.py` - Board detection and cropping
-- `piece_recognition.py` - LLaVA-based piece recognition
+- `piece_recognition.py` - UI-TARS-based piece recognition
 - `fen_converter.py` - FEN notation conversion
 
 ### Engine Module

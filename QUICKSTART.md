@@ -48,14 +48,11 @@ humanizer:
   skill_level: 7     # 1-10 (1=slow/imprecise, 10=fast/precise)
 ```
 
-### Choose Vision Model
+### Vision Model Configuration
 ```yaml
 vision_model:
-  # Fast (recommended)
-  model_name: llava-hf/llava-v1.6-mistral-7b-hf
-  
-  # Accurate (requires more VRAM)
-  # model_name: llava-hf/llava-v1.6-34b-hf
+  # UI-TARS 1.5 - 7B parameters (efficient and accurate)
+  model_name: ByteDance-Seed/UI-TARS-1.5-7B
 ```
 
 ## 🎯 Common Commands
@@ -83,9 +80,8 @@ stockfish:
 
 ### Out of Memory (GPU)
 ```yaml
-# Use smaller model:
-vision_model:
-  model_name: llava-hf/llava-v1.6-mistral-7b-hf
+# UI-TARS is already efficient with 7B parameters
+# Try closing other GPU applications or use CPU mode
 ```
 
 ### Board Detection Issues
@@ -151,7 +147,7 @@ cat logs/chess_agent_*.log
 ```
 1. Agent captures screen → Board image
 2. Detects chessboard → Cropped board
-3. LLaVA recognizes pieces → Piece positions
+3. UI-TARS recognizes pieces → Piece positions
 4. Converts to FEN → Chess notation
 5. Stockfish calculates → Best move
 6. Executes move → Mouse automation
