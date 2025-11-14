@@ -5,7 +5,7 @@ Piece recognition module using UI-TARS vision model.
 import torch
 import numpy as np
 from PIL import Image
-from transformers import AutoProcessor, AutoModelForCausalLM
+from transformers import Qwen2VLForConditionalGeneration, AutoProcessor
 from typing import Dict, Optional
 import json
 import re
@@ -26,12 +26,13 @@ class PieceRecognizer:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         print(f"Loading UI-TARS model: {model_name} on {self.device}...")
         
-        # Load model and processor
+        # Load processor
         self.processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
-        self.model = AutoModelForCausalLM.from_pretrained(
+        
+        # Load model with correct architecture (Qwen2VL-based)
+        self.model = Qwen2VLForConditionalGeneration.from_pretrained(
             model_name,
             torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
-            low_cpu_mem_usage=True,
             device_map="auto" if self.device == "cuda" else None,
             trust_remote_code=True
         )
@@ -48,27 +49,14 @@ class PieceRecognizer:
         Returns:
             Formatted prompt string
         """
-        prompt = """<image>
-Analyze this chess board image. The board has 8 rows (ranks 1-8) and 8 columns (files a-h).
+        prompt = """Analyze this chess board image and identify all pieces.
 
-Identify all chess pieces and their positions on the board.
+For each piece, provide its square location (a1-h8), piece type (pawn, knight, bishop, rook, queen, king), and color (white, black).
 
-For each piece, provide:
-- Square location using algebraic notation (e.g., e2, d4, a1)
-- Piece type: pawn, knight, bishop, rook, queen, or king
-- Color: white or black
+Return ONLY a JSON object like this:
+{"a1": {"piece": "rook", "color": "white"}, "e4": {"piece": "pawn", "color": "black"}}
 
-Return ONLY a JSON object in this exact format:
-{
-  "a1": {"piece": "rook", "color": "white"},
-  "b1": {"piece": "knight", "color": "white"},
-  "e4": {"piece": "pawn", "color": "black"}
-}
-
-Rules:
-- Only include squares that have pieces
-- Use lowercase for all values
-- Use standard algebraic notation for squares"""
+Use lowercase, algebraic notation, and only include occupied squares."""
         return prompt
     
     def recognize(self, board_image: np.ndarray) -> Dict[str, Dict[str, str]]:
@@ -89,10 +77,30 @@ Rules:
             pil_image = board_image
         
         # Create prompt
-        prompt = self.create_prompt()
+        text_prompt = self.create_prompt()
         
-        # Process inputs
-        inputs = self.processor(text=prompt, images=pil_image, return_tensors="pt")
+        # Qwen2VL format: messages with image and text
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image", "image": pil_image},
+                    {"type": "text", "text": text_prompt}
+                ]
+            }
+        ]
+        
+        # Process inputs using apply_chat_template
+        text = self.processor.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+        
+        inputs = self.processor(
+            text=[text],
+            images=[pil_image],
+            return_tensors="pt",
+            padding=True
+        )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
         
         # Generate response
@@ -102,16 +110,20 @@ Rules:
                 **inputs,
                 max_new_tokens=1024,
                 do_sample=False,
-                temperature=0.2,
-                top_p=0.9,
             )
         
         # Decode response
-        response = self.processor.decode(outputs[0], skip_special_tokens=True)
+        response = self.processor.batch_decode(
+            outputs, 
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=False
+        )[0]
         
-        # Extract the response (remove the prompt)
-        if prompt in response:
-            response = response.replace(prompt, "").strip()
+        # Extract only the assistant's response
+        if "assistant" in response.lower():
+            parts = response.split("assistant")
+            if len(parts) > 1:
+                response = parts[-1].strip()
         
         print(f"UI-TARS Response: {response[:200]}...")
         

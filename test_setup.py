@@ -1,7 +1,7 @@
 """
 Quick test script to verify all components are working.
 """
-
+import stockfish as sf
 import sys
 from pathlib import Path
 
