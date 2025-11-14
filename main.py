@@ -82,7 +82,8 @@ class ChessAgent:
         )
         
         self.recognizer = PieceRecognizer(
-            model_name=self.config['vision_model']['model_name']
+            model_name=self.config['vision_model']['model_name'],
+            quantization=self.config['vision_model'].get('quantization', '4bit')
         )
         
         self.fen_converter = FENConverter()

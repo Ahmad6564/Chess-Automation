@@ -1,6 +1,6 @@
 # ♟️ Chess Vision Agent — Human-Like Autonomous Chess Player
 
-An end-to-end AI agent that **plays chess like a human**, combining **computer vision**, a **multimodal vision-language model (UI-TARS)**, and the **Stockfish chess engine**.
+An end-to-end AI agent that **plays chess like a human**, combining **computer vision**, a **multimodal vision-language model (Qwen2-VL)**, and the **Stockfish chess engine**.
 
 The agent can observe a chessboard (desktop or web platform like Chess.com), understand the current position visually, decide the best move using Stockfish, and physically execute the move via mouse or browser automation.
 
@@ -34,7 +34,7 @@ Instead of relying on raw game APIs, it interacts with the chess interface like 
 ## ✨ Features
 
 - 🎥 **Vision-based perception** — understands the board purely from images.  
-- 🧩 **UI-TARS model integration** — detects chess pieces and their locations with 7B efficient parameters.  
+- 🧩 **Qwen2-VL model integration** — detects chess pieces and their locations with 2B quantized parameters.  
 - ♟️ **Stockfish reasoning** — computes best moves using world-class chess logic.  
 - 🖱️ **GUI automation** — performs moves with realistic human-like behavior.  
 - 🕵️ **Platform agnostic** — works on web (Chess.com) or desktop apps.  
@@ -48,7 +48,7 @@ Instead of relying on raw game APIs, it interacts with the chess interface like 
 flowchart TD
 
 A[Screen Capture / Webcam] --> B[Board Detection & Preprocessing]
-B --> C[UI-TARS Model - Piece Recognition]
+B --> C[Qwen2-VL Model - Piece Recognition]
 C --> D[FEN Converter]
 D --> E[Stockfish Engine]
 E --> F[Move Mapping & Automation]
@@ -142,11 +142,11 @@ Output: Cropped, normalized board image.
 
 3. piece_recognition.py
 
-Purpose: Use UI-TARS to identify piece type & color on each square.
+Purpose: Use Qwen2-VL to identify piece type & color on each square.
 
 Responsibilities:
 
-Load ByteDance-Seed/UI-TARS-1.5-7B.
+Load ByteDance-Seed/Qwen2-VL-2B-Instruct.
 
 Query model with prompt like:
 

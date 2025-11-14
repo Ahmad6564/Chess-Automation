@@ -34,7 +34,8 @@ stockfish:
   skill_level: 20
   time_limit: 1.0
 vision_model:
-  model_name: ByteDance-Seed/UI-TARS-1.5-7B
+  model_name: Qwen/Qwen2-VL-2B-Instruct
+  quantization: 4bit  # Options: 4bit, 8bit, or none
   target_size:
   - 512
   - 512

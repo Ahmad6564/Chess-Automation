@@ -51,8 +51,8 @@ humanizer:
 ### Vision Model Configuration
 ```yaml
 vision_model:
-  # UI-TARS 1.5 - 7B parameters (efficient and accurate)
-  model_name: ByteDance-Seed/UI-TARS-1.5-7B
+  # Qwen2-VL 1.5 - 2B parameters with 4-bit quantization (efficient and accurate)
+  model_name: ByteDance-Seed/Qwen2-VL-2B-Instruct
 ```
 
 ## 🎯 Common Commands
@@ -80,7 +80,7 @@ stockfish:
 
 ### Out of Memory (GPU)
 ```yaml
-# UI-TARS is already efficient with 7B parameters
+# Qwen2-VL is already efficient with 2B parameters with 4-bit quantization
 # Try closing other GPU applications or use CPU mode
 ```
 
@@ -147,7 +147,7 @@ cat logs/chess_agent_*.log
 ```
 1. Agent captures screen → Board image
 2. Detects chessboard → Cropped board
-3. UI-TARS recognizes pieces → Piece positions
+3. Qwen2-VL recognizes pieces → Piece positions
 4. Converts to FEN → Chess notation
 5. Stockfish calculates → Best move
 6. Executes move → Mouse automation

@@ -96,8 +96,8 @@ python main.py
 - Image normalization (512x512 default)
 
 **piece_recognition.py**
-- UI-TARS model integration (ByteDance-Seed/UI-TARS-1.5-7B)
-- Efficient 7B parameter model designed for UI understanding
+- Qwen2-VL model integration (ByteDance-Seed/Qwen2-VL-2B-Instruct)
+- Efficient 2B parameter with 4-bit quantization model designed for UI understanding
 - Structured JSON output parsing
 - Piece position detection (square + piece type + color)
 
@@ -278,7 +278,7 @@ All settings in `config.yaml`:
 ## 🎯 Key Features
 
 ✅ **Vision-Based Perception** - Understands board from images only  
-✅ **UI-TARS Integration** - Efficient 7B parameter model for piece recognition  
+✅ **Qwen2-VL Integration** - Efficient 2B parameter with 4-bit quantization model for piece recognition  
 ✅ **Stockfish Reasoning** - World-class chess calculation  
 ✅ **Human-Like Behavior** - Natural delays and movements  
 ✅ **Platform Agnostic** - Works on desktop apps and web  
@@ -328,7 +328,7 @@ Tests include:
 
 ## 📝 Notes
 
-- First run will download the UI-TARS model (~7B parameters, more efficient than LLaVA)
+- First run will download the Qwen2-VL model (~2B parameters with 4-bit quantization, more efficient than LLaVA)
 - GPU strongly recommended for vision model
 - CPU mode supported but slower
 - Move mouse to top-left corner to abort (FailSafe)
@@ -341,7 +341,7 @@ Tests include:
 
 All requested features have been implemented according to your specifications:
 
-- ✅ Complete vision pipeline with UI-TARS (7B efficient model)
+- ✅ Complete vision pipeline with Qwen2-VL (2B quantized model)
 - ✅ Stockfish integration
 - ✅ Human-like automation
 - ✅ Modular architecture

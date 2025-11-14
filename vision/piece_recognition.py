@@ -1,50 +1,106 @@
 """
-Piece recognition module using UI-TARS vision model.
+Piece recognition module using Qwen2-VL vision model with quantization.
 """
 
 import torch
 import numpy as np
 from PIL import Image
-from transformers import Qwen2VLForConditionalGeneration, AutoProcessor
+from transformers import AutoModelForVision2Seq
+from transformers.models.auto import AutoProcessor
 from typing import Dict, Optional
 import json
 import re
 
 
 class PieceRecognizer:
-    """Uses UI-TARS model to recognize chess pieces on the board."""
+    """Uses Qwen2-VL model with 4-bit quantization to recognize chess pieces on the board."""
     
-    def __init__(self, model_name: str = "ByteDance-Seed/UI-TARS-1.5-7B"):
+    def __init__(self, model_name: str = "Qwen/Qwen2-VL-2B-Instruct", quantization: str = "4bit"):
         """
-        Initialize the UI-TARS model for piece recognition.
+        Initialize the Qwen2-VL model for piece recognition with quantization.
         
         Args:
             model_name: HuggingFace model identifier
-                       Default: ByteDance-Seed/UI-TARS-1.5-7B (7B parameters, efficient)
+                       Default: Qwen/Qwen2-VL-2B-Instruct (2B parameters, very fast)
+            quantization: Quantization mode - "4bit", "8bit", or "none"
+                         4-bit is fastest and uses least memory (~1.5GB)
+                         8-bit is more accurate but slower (~3GB)
+                         none uses full precision (not recommended for CPU)
         """
         self.model_name = model_name
+        self.quantization = quantization
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"Loading UI-TARS model: {model_name} on {self.device}...")
+        
+        print(f"Loading Qwen2-VL model: {model_name}")
+        print(f"Device: {self.device} | Quantization: {quantization}")
+        
+        if quantization in ["4bit", "8bit"]:
+            print("First run will download model (~4GB) and may take 2-3 minutes...")
         
         # Load processor
-        self.processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
-        
-        # Load model with correct architecture (Qwen2VL-based)
-        self.model = Qwen2VLForConditionalGeneration.from_pretrained(
+        self.processor = AutoProcessor.from_pretrained(
             model_name,
-            torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
-            device_map="auto" if self.device == "cuda" else None,
             trust_remote_code=True
         )
+        print("✓ Processor loaded")
         
-        if self.device == "cpu":
-            self.model = self.model.to(self.device)
+        # Load model with quantization
+        print("Loading quantized model (much faster than full precision)...")
         
-        print("Model loaded successfully!")
+        if quantization == "4bit":
+            # 4-bit quantization - fastest, ~1.5GB memory
+            from transformers import BitsAndBytesConfig
+            
+            quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4"
+            )
+            
+            self.model = AutoModelForVision2Seq.from_pretrained(
+                model_name,
+                quantization_config=quantization_config,
+                device_map="auto",
+                trust_remote_code=True
+            )
+            print("✓ Model loaded with 4-bit quantization (~1.5GB memory)")
+            
+        elif quantization == "8bit":
+            # 8-bit quantization - balanced, ~3GB memory
+            from transformers import BitsAndBytesConfig
+            
+            quantization_config = BitsAndBytesConfig(
+                load_in_8bit=True
+            )
+            
+            self.model = AutoModelForVision2Seq.from_pretrained(
+                model_name,
+                quantization_config=quantization_config,
+                device_map="auto",
+                trust_remote_code=True
+            )
+            print("✓ Model loaded with 8-bit quantization (~3GB memory)")
+            
+        else:
+            # No quantization - slowest, most accurate
+            self.model = AutoModelForVision2Seq.from_pretrained(
+                model_name,
+                torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
+                device_map="auto" if self.device == "cuda" else None,
+                trust_remote_code=True
+            )
+            
+            if self.device == "cpu":
+                self.model = self.model.to(self.device)
+            
+            print("✓ Model loaded without quantization (full precision)")
+        
+        print(f"✓ Qwen2-VL ready for inference!")
         
     def create_prompt(self) -> str:
         """
-        Create the prompt for UI-TARS to recognize chess pieces.
+        Create the prompt for Qwen2-VL to recognize chess pieces.
         
         Returns:
             Formatted prompt string
@@ -104,28 +160,43 @@ Use lowercase, algebraic notation, and only include occupied squares."""
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
         
         # Generate response
-        print("Analyzing board with UI-TARS...")
-        with torch.no_grad():
-            outputs = self.model.generate(
-                **inputs,
-                max_new_tokens=1024,
-                do_sample=False,
-            )
+        print("Analyzing board with Qwen2-VL (quantized)...")
+        try:
+            with torch.no_grad():
+                # Generate using the model's generate method
+                generated_ids = self.model.generate(
+                    **inputs,
+                    max_new_tokens=1024,
+                    do_sample=False,
+                )
+            
+            # Trim input tokens from generated output
+            generated_ids_trimmed = [
+                out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+            ]
+            
+            # Decode response
+            response = self.processor.batch_decode(
+                generated_ids_trimmed,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=False
+            )[0]
+            
+        except Exception as e:
+            print(f"Generation error: {e}")
+            print("Attempting alternative generation method...")
+            # Fallback: use full output
+            with torch.no_grad():
+                outputs = self.model.generate(**inputs, max_new_tokens=1024)
+            response = self.processor.decode(outputs[0], skip_special_tokens=True)
+            
+            # Try to extract assistant response
+            if "assistant" in response.lower():
+                parts = response.split("assistant")
+                if len(parts) > 1:
+                    response = parts[-1].strip()
         
-        # Decode response
-        response = self.processor.batch_decode(
-            outputs, 
-            skip_special_tokens=True,
-            clean_up_tokenization_spaces=False
-        )[0]
-        
-        # Extract only the assistant's response
-        if "assistant" in response.lower():
-            parts = response.split("assistant")
-            if len(parts) > 1:
-                response = parts[-1].strip()
-        
-        print(f"UI-TARS Response: {response[:200]}...")
+        print(f"Qwen2-VL Response: {response[:200]}...")
         
         # Parse the JSON response
         piece_map = self._parse_response(response)
@@ -134,10 +205,10 @@ Use lowercase, algebraic notation, and only include occupied squares."""
     
     def _parse_response(self, response: str) -> Dict[str, Dict[str, str]]:
         """
-        Parse UI-TARS's text response into structured piece data.
+        Parse Qwen2-VL's text response into structured piece data.
         
         Args:
-            response: Raw text response from UI-TARS
+            response: Raw text response from Qwen2-VL
         
         Returns:
             Parsed piece dictionary
@@ -193,18 +264,20 @@ Use lowercase, algebraic notation, and only include occupied squares."""
 
 
 def recognize_pieces(board_image: np.ndarray, 
-                    model_name: str = "ByteDance-Seed/UI-TARS-1.5-7B") -> Dict[str, Dict[str, str]]:
+                    model_name: str = "Qwen/Qwen2-VL-2B-Instruct",
+                    quantization: str = "4bit") -> Dict[str, Dict[str, str]]:
     """
     Convenience function to recognize pieces.
     
     Args:
         board_image: Board image as numpy array
-        model_name: UI-TARS model to use
+        model_name: Qwen2-VL model to use
+        quantization: "4bit", "8bit", or "none"
     
     Returns:
         Piece dictionary
     """
-    recognizer = PieceRecognizer(model_name)
+    recognizer = PieceRecognizer(model_name, quantization)
     return recognizer.recognize(board_image)
 
 

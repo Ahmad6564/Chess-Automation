@@ -1,20 +1,20 @@
-# 🔄 Model Update: UI-TARS 1.5-7B
+# 🔄 Model Update: Qwen2-VL-2B-Instruct
 
-## ✅ Successfully Migrated from LLaVA to UI-TARS
+## ✅ Successfully Migrated from LLaVA to Qwen2-VL
 
 ### What Changed?
 
-The Chess Vision Agent now uses **ByteDance-Seed/UI-TARS-1.5-7B** instead of LLaVA for piece recognition.
+The Chess Vision Agent now uses **ByteDance-Seed/Qwen2-VL-2B-Instruct** instead of LLaVA for piece recognition.
 
 ---
 
-## 🎯 Why UI-TARS?
+## 🎯 Why Qwen2-VL?
 
 ### Advantages over LLaVA:
 
-1. **Fewer Parameters** - 7B parameters (vs 34B for LLaVA large model)
+1. **Fewer Parameters** - 2B parameters with 4-bit quantization (vs 34B for LLaVA large model)
 2. **More Efficient** - Designed specifically for UI understanding tasks
-3. **Better for Chess Boards** - UI-TARS excels at structured visual interfaces
+3. **Better for Chess Boards** - Qwen2-VL excels at structured visual interfaces
 4. **Faster Inference** - Reduced model size means quicker response times
 5. **Lower VRAM Requirements** - Runs on more GPUs with less memory
 
@@ -22,7 +22,7 @@ The Chess Vision Agent now uses **ByteDance-Seed/UI-TARS-1.5-7B** instead of LLa
 
 ## 📊 Model Comparison
 
-| Feature | LLaVA-7B | LLaVA-34B | **UI-TARS-7B** |
+| Feature | LLaVA-7B | LLaVA-34B | **Qwen2-VL-2B** |
 |---------|----------|-----------|----------------|
 | Parameters | 7B | 34B | **7B** |
 | Designed For | General vision | General vision | **UI tasks** ✅ |
@@ -37,15 +37,15 @@ The Chess Vision Agent now uses **ByteDance-Seed/UI-TARS-1.5-7B** instead of LLa
 All files have been updated to reflect the model change:
 
 ### Core Module
-- ✅ `vision/piece_recognition.py` - Now uses UI-TARS model
+- ✅ `vision/piece_recognition.py` - Now uses Qwen2-VL model
   - Changed from `LlavaForConditionalGeneration` to `AutoModelForCausalLM`
-  - Updated prompts for better UI-TARS compatibility
+  - Updated prompts for better Qwen2-VL compatibility
   - Added `trust_remote_code=True` parameter
 
 ### Configuration
-- ✅ `config.yaml` - Default model changed to UI-TARS
+- ✅ `config.yaml` - Default model changed to Qwen2-VL
   - Old: `llava-hf/llava-v1.6-mistral-7b-hf`
-  - New: `ByteDance-Seed/UI-TARS-1.5-7B`
+  - New: `ByteDance-Seed/Qwen2-VL-2B-Instruct`
 
 ### Documentation
 - ✅ `SETUP.md` - All references updated
@@ -71,7 +71,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-The first run will download UI-TARS instead of LLaVA.
+The first run will download Qwen2-VL instead of LLaVA.
 
 ---
 
@@ -83,16 +83,16 @@ The first run will download UI-TARS instead of LLaVA.
 from transformers import LlavaForConditionalGeneration
 model = LlavaForConditionalGeneration.from_pretrained(...)
 
-# New (UI-TARS)
+# New (Qwen2-VL)
 from transformers import AutoModelForCausalLM
 model = AutoModelForCausalLM.from_pretrained(
-    "ByteDance-Seed/UI-TARS-1.5-7B",
-    trust_remote_code=True  # Required for UI-TARS
+    "ByteDance-Seed/Qwen2-VL-2B-Instruct",
+    trust_remote_code=True  # Required for Qwen2-VL
 )
 ```
 
 ### Prompt Format
-The prompt has been optimized for UI-TARS's understanding:
+The prompt has been optimized for Qwen2-VL's understanding:
 - More direct instructions
 - Clearer JSON format specification
 - Better structured for UI analysis
@@ -102,7 +102,7 @@ The prompt has been optimized for UI-TARS's understanding:
 ## 📈 Expected Improvements
 
 1. **Faster piece recognition** - Optimized for structured interfaces
-2. **Better accuracy on chess boards** - UI-TARS specializes in UI elements
+2. **Better accuracy on chess boards** - Qwen2-VL specializes in UI elements
 3. **Lower resource usage** - More efficient model architecture
 4. **Improved JSON parsing** - Better structured output
 
@@ -118,7 +118,7 @@ python test_setup.py
 
 This will:
 - Check if dependencies are installed
-- Verify UI-TARS can be loaded
+- Verify Qwen2-VL can be loaded
 - Test basic functionality
 
 ---
@@ -139,7 +139,7 @@ All commands and workflows remain identical!
 
 ## 📦 Dependencies
 
-No new dependencies required. UI-TARS uses the same:
+No new dependencies required. Qwen2-VL uses the same:
 - `transformers`
 - `torch`
 - `accelerate`
@@ -150,7 +150,7 @@ Already in `requirements.txt`!
 
 ## ✨ Summary
 
-✅ **Model Updated**: LLaVA → UI-TARS 1.5-7B  
+✅ **Model Updated**: LLaVA → Qwen2-VL-2B-Instruct  
 ✅ **All Documentation Updated**  
 ✅ **Code Fully Migrated**  
 ✅ **Configuration Updated**  

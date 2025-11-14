@@ -6,7 +6,7 @@
 
 #### Prerequisites
 - Python 3.8 or higher
-- CUDA-capable GPU (recommended for UI-TARS model)
+- CUDA-capable GPU (recommended for Qwen2-VL model)
 - Stockfish chess engine
 
 #### Install Python Dependencies
@@ -66,7 +66,7 @@ python main.py
 
 The agent will:
 1. Capture the current board position
-2. Recognize pieces using UI-TARS
+2. Recognize pieces using Qwen2-VL
 3. Calculate the best move with Stockfish
 4. Execute the move with human-like behavior
 5. Wait for opponent's move
@@ -78,9 +78,9 @@ The agent will:
 
 ```yaml
 vision_model:
-  # UI-TARS 1.5 - 7B parameter model (efficient and accurate)
+  # Qwen2-VL 1.5 - 2B parameter with 4-bit quantization model (efficient and accurate)
   # Specifically designed for UI understanding tasks
-  model_name: ByteDance-Seed/UI-TARS-1.5-7B
+  model_name: ByteDance-Seed/Qwen2-VL-2B-Instruct
   
   target_size: [512, 512]
 ```
@@ -181,7 +181,7 @@ game_loop:
 
 ### Issue: "CUDA out of memory"
 **Solution:**
-- The UI-TARS-1.5-7B model is already efficient with only 7B parameters
+- The Qwen2-VL-2B-Instruct model is already efficient with only 2B parameters with 4-bit quantization
 - Or run on CPU (slower):
   ```python
   # The code automatically detects and uses CPU if CUDA unavailable
@@ -244,7 +244,7 @@ logging:
 ### Vision Module
 - `capture.py` - Screen capture
 - `board_detection.py` - Board detection and cropping
-- `piece_recognition.py` - UI-TARS-based piece recognition
+- `piece_recognition.py` - Qwen2-VL-based piece recognition
 - `fen_converter.py` - FEN notation conversion
 
 ### Engine Module
