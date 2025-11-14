@@ -97,3 +97,65 @@ print("  Qwen2-VL-2B (4bit): ~1.5GB, 2-3 min load (CPU)")
 print("\nNext steps:")
 print("  1. Run: python main.py --setup (configure board)")
 print("  2. Run: python main.py (start agent)")
+
+"""Quick test to verify HF API setup."""
+import os
+import sys
+
+def test_api_token():
+    """Check if HF API token is set."""
+    print("=" * 60)
+    print("Testing Hugging Face API Setup")
+    print("=" * 60)
+    
+    token = os.getenv("HF_API_TOKEN")
+    if not token:
+        print("\n❌ HF_API_TOKEN not found!")
+        print("\nPlease set your Hugging Face API token:")
+        print("  Windows: $env:HF_API_TOKEN=\"hf_your_token_here\"")
+        print("  Linux/Mac: export HF_API_TOKEN=\"hf_your_token_here\"")
+        print("\nGet token from: https://huggingface.co/settings/tokens")
+        return False
+    
+    print(f"\n✓ API token found: {token[:10]}...")
+    return True
+
+def test_api_connection():
+    """Test API connection."""
+    import requests
+    
+    token = os.getenv("HF_API_TOKEN")
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # Test with a simple model
+    url = "https://api-inference.huggingface.co/models/Qwen/Qwen2-VL-2B-Instruct"
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            print("✓ API connection successful")
+            return True
+        else:
+            print(f"❌ API returned status {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Connection failed: {e}")
+        return False
+
+def main():
+    """Run all tests."""
+    if not test_api_token():
+        sys.exit(1)
+    
+    if not test_api_connection():
+        sys.exit(1)
+    
+    print("\n" + "=" * 60)
+    print("✅ All tests passed! Ready to run the agent.")
+    print("=" * 60)
+    print("\nNext steps:")
+    print("  1. python main.py --setup  # Configure board region")
+    print("  2. python main.py          # Run the agent")
+
+if __name__ == "__main__":
+    main()

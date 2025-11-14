@@ -66,26 +66,17 @@ class ChessAgent:
     
     def _initialize_components(self):
         """Initialize all agent components."""
-        self.logger.info("Initializing components...")
+        logger.info("Initializing components...")
         
-        # Vision components
-        self.capturer = BoardCapture()
-        self.capturer.set_board_region(
-            self.config['board_region']['left'],
-            self.config['board_region']['top'],
-            self.config['board_region']['width'],
-            self.config['board_region']['height']
+        # Vision components - using HF Inference API (no local model)
+        self.capturer = BoardCapture(
+            region=self.config['board_region']
         )
-        
-        self.detector = BoardDetector(
-            target_size=tuple(self.config['vision_model']['target_size'])
-        )
-        
+        self.detector = BoardDetector()
         self.recognizer = PieceRecognizer(
             model_name=self.config['vision_model']['model_name'],
-            quantization=self.config['vision_model'].get('quantization', '4bit')
+            api_token=self.config['vision_model'].get('api_token')
         )
-        
         self.fen_converter = FENConverter()
         
         # Engine components
@@ -369,5 +360,4 @@ def main():
 
 if __name__ == "__main__":
     main()
- 
- 
+

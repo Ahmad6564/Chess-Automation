@@ -1,33 +1,22 @@
 # Chess Automation Agent - Required Dependencies
 
 # Core dependencies
-numpy>=1.24.0
-pillow>=10.0.0
-opencv-python>=4.8.0
-PyYAML>=6.0
+numpy>=1.21.0
+opencv-python>=4.5.0
+pillow>=9.0.0
+pyyaml>=6.0
+requests>=2.28.0  # For HF API
 
 # Chess engine
-python-chess>=1.999
+python-chess>=1.9.0
 stockfish>=3.28.0
 
-# Vision model (Qwen2-VL with quantization)
-torch>=2.0.0
-transformers>=4.37.0
-accelerate>=0.24.0
-bitsandbytes>=0.41.0  # Required for 4-bit/8-bit quantization
-qwen-vl-utils>=0.0.1  # Qwen2-VL utilities
-
-# Screen capture
-mss>=9.0.0
-
 # GUI automation
-pyautogui>=0.9.54
+pyautogui>=0.9.53
 pynput>=1.7.6
 
-# Optional: For even better performance
-# xformers>=0.0.22  # For faster attention (optional)
+# Logging
+colorlog>=6.7.0
 
-# Development tools (optional)
-pytest>=7.4.0
-black>=23.0.0
-flake8>=6.0.0
+# Hugging Face (lightweight - no model downloads!)
+transformers>=4.30.0  # Just for tokenizer/processor utilities

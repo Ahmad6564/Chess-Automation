@@ -34,8 +34,8 @@ stockfish:
   skill_level: 20
   time_limit: 1.0
 vision_model:
-  model_name: Qwen/Qwen2-VL-2B-Instruct
-  quantization: 4bit  # Options: 4bit, 8bit, or none (quantization only works on GPU)
-  target_size:
-  - 512
-  - 512
+  model_name: "Qwen/Qwen2-VL-2B-Instruct"
+  # API token (or set HF_API_TOKEN environment variable)
+  # Get your token from: https://huggingface.co/settings/tokens
+  api_token: null  # Will use HF_API_TOKEN env var if null
+  target_size: [512, 512]

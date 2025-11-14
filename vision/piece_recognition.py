@@ -1,101 +1,50 @@
 """
-Piece recognition module using Qwen2-VL vision model with quantization.
+Piece recognition module using Hugging Face Inference API.
+No local model loading required - uses cloud inference.
 """
-
-import torch
-import numpy as np
 from PIL import Image
-from transformers import AutoModelForVision2Seq
-from transformers.models.auto import AutoProcessor
-from typing import Dict, Optional
+import numpy as np
+import requests
 import json
-import re
+import base64
+import io
+from typing import Dict, Optional
+import os
+from utils.logger import setup_logger
+
+logger = setup_logger(__name__)
 
 
 class PieceRecognizer:
-    """Uses Qwen2-VL model with 4-bit quantization to recognize chess pieces on the board."""
+    """Uses Hugging Face Inference API to recognize chess pieces."""
     
-    def __init__(self, model_name: str = "Qwen/Qwen2-VL-2B-Instruct", quantization: str = "4bit"):
+    def __init__(self, model_name: str = "Qwen/Qwen2-VL-2B-Instruct", api_token: Optional[str] = None):
         """
-        Initialize the Qwen2-VL model for piece recognition with quantization.
+        Initialize the Hugging Face API client.
         
         Args:
             model_name: HuggingFace model identifier
-                       Default: Qwen/Qwen2-VL-2B-Instruct (2B parameters, very fast)
-            quantization: Quantization mode - "4bit", "8bit", or "none"
-                         4-bit is fastest and uses least memory (~1.5GB)
-                         8-bit is more accurate but slower (~3GB)
-                         none uses full precision (not recommended for CPU)
+            api_token: HF API token (or set HF_API_TOKEN environment variable)
         """
         self.model_name = model_name
-        self.quantization = quantization
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         
-        print(f"Loading Qwen2-VL model: {model_name}")
-        print(f"Device: {self.device} | Quantization: {quantization}")
-        
-        # Load processor
-        self.processor = AutoProcessor.from_pretrained(
-            model_name,
-            trust_remote_code=True
-        )
-        print("✓ Processor loaded")
-        
-        # Load model with appropriate settings based on device
-        print("Loading model...")
-        
-        # BitsAndBytes quantization only works on CUDA GPUs
-        if self.device == "cuda" and quantization in ["4bit", "8bit"]:
-            print(f"Using {quantization} quantization on GPU...")
-            from transformers import BitsAndBytesConfig
-            
-            if quantization == "4bit":
-                quantization_config = BitsAndBytesConfig(
-                    load_in_4bit=True,
-                    bnb_4bit_compute_dtype=torch.float16,
-                    bnb_4bit_use_double_quant=True,
-                    bnb_4bit_quant_type="nf4"
-                )
-            else:  # 8bit
-                quantization_config = BitsAndBytesConfig(
-                    load_in_8bit=True
-                )
-            
-            self.model = AutoModelForVision2Seq.from_pretrained(
-                model_name,
-                quantization_config=quantization_config,
-                device_map="auto",
-                trust_remote_code=True
+        # Get API token from parameter or environment
+        self.api_token = api_token or os.getenv("HF_API_TOKEN")
+        if not self.api_token:
+            raise ValueError(
+                "Hugging Face API token required! Set HF_API_TOKEN environment variable or pass api_token parameter.\n"
+                "Get your token from: https://huggingface.co/settings/tokens"
             )
-            print(f"✓ Model loaded with {quantization} quantization")
-            
-        else:
-            # CPU: Load in float32 (no quantization support on CPU with BitsAndBytes)
-            if self.device == "cpu":
-                print("⚠️  CPU detected: Loading in float32 (quantization requires GPU)")
-                print("   First load will download ~4GB and take 2-3 minutes...")
-                print("   Inference will be slower on CPU. Consider using GPU if available.")
-            
-            self.model = AutoModelForVision2Seq.from_pretrained(
-                model_name,
-                torch_dtype=torch.float32,  # CPU only supports float32
-                low_cpu_mem_usage=True,
-                trust_remote_code=True
-            )
-            
-            self.model = self.model.to(self.device)
-            print(f"✓ Model loaded on {self.device.upper()}")
         
-        print(f"✓ Qwen2-VL ready for inference!")
+        self.api_url = f"https://api-inference.huggingface.co/models/{model_name}"
+        self.headers = {"Authorization": f"Bearer {self.api_token}"}
         
+        logger.info(f"Initialized HF Inference API client for {model_name}")
+        logger.info("No local model download required - using cloud inference")
+    
     def create_prompt(self) -> str:
-        """
-        Create the prompt for Qwen2-VL to recognize chess pieces.
-        
-        Returns:
-            Formatted prompt string
-        """
-        prompt = """Analyze this chess board image and identify all pieces.
+        """Create the chess piece recognition prompt."""
+        return """Analyze this chess board image and identify all pieces.
 
 For each piece, provide its square location (a1-h8), piece type (pawn, knight, bishop, rook, queen, king), and color (white, black).
 
@@ -103,182 +52,157 @@ Return ONLY a JSON object like this:
 {"a1": {"piece": "rook", "color": "white"}, "e4": {"piece": "pawn", "color": "black"}}
 
 Use lowercase, algebraic notation, and only include occupied squares."""
-        return prompt
     
     def recognize(self, board_image: np.ndarray) -> Dict[str, Dict[str, str]]:
         """
-        Recognize all pieces on the board.
+        Recognize pieces using HF Inference API.
         
         Args:
-            board_image: Numpy array of the board image (RGB)
+            board_image: Board image as numpy array (H, W, 3)
         
         Returns:
             Dictionary mapping squares to piece info
-            Format: {"e2": {"piece": "pawn", "color": "white"}, ...}
+            Example: {"e2": {"piece": "pawn", "color": "white"}}
         """
+        logger.info("Recognizing pieces via Hugging Face API...")
+        
         # Convert numpy array to PIL Image
         if isinstance(board_image, np.ndarray):
-            pil_image = Image.fromarray(board_image)
+            image = Image.fromarray(board_image)
         else:
-            pil_image = board_image
+            image = board_image
         
-        # Create prompt
-        text_prompt = self.create_prompt()
+        # Convert image to base64
+        buffered = io.BytesIO()
+        image.save(buffered, format="PNG")
+        img_base64 = base64.b64encode(buffered.getvalue()).decode()
         
-        # Qwen2VL format: messages with image and text
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "image", "image": pil_image},
-                    {"type": "text", "text": text_prompt}
-                ]
+        # Prepare the request payload
+        prompt = self.create_prompt()
+        
+        # For vision models, send image as base64
+        payload = {
+            "inputs": {
+                "image": img_base64,
+                "question": prompt
+            },
+            "parameters": {
+                "max_new_tokens": 1024,
+                "temperature": 0.1,  # Low temperature for consistent outputs
             }
-        ]
+        }
         
-        # Process inputs using apply_chat_template
-        text = self.processor.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
-        )
-        
-        inputs = self.processor(
-            text=[text],
-            images=[pil_image],
-            return_tensors="pt",
-            padding=True
-        )
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
-        
-        # Generate response
-        print("Analyzing board with Qwen2-VL (quantized)...")
         try:
-            with torch.no_grad():
-                # Generate using the model's generate method
-                generated_ids = self.model.generate(
-                    **inputs,
-                    max_new_tokens=1024,
-                    do_sample=False,
-                )
+            # Make API request
+            response = requests.post(
+                self.api_url,
+                headers=self.headers,
+                json=payload,
+                timeout=30
+            )
             
-            # Trim input tokens from generated output
-            generated_ids_trimmed = [
-                out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
-            ]
+            if response.status_code == 503:
+                logger.warning("Model is loading, retrying in 20 seconds...")
+                import time
+                time.sleep(20)
+                response = requests.post(self.api_url, headers=self.headers, json=payload, timeout=30)
             
-            # Decode response
-            response = self.processor.batch_decode(
-                generated_ids_trimmed,
-                skip_special_tokens=True,
-                clean_up_tokenization_spaces=False
-            )[0]
+            response.raise_for_status()
             
+            # Parse response
+            result = response.json()
+            
+            # Extract text from response (format depends on model)
+            if isinstance(result, list) and len(result) > 0:
+                text_response = result[0].get("generated_text", "")
+            elif isinstance(result, dict):
+                text_response = result.get("generated_text", result.get("answer", ""))
+            else:
+                text_response = str(result)
+            
+            logger.info(f"API Response: {text_response[:200]}...")
+            
+            # Parse the JSON response
+            pieces = self._parse_response(text_response)
+            logger.info(f"Detected {len(pieces)} pieces on board")
+            
+            return pieces
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"API request failed: {e}")
+            return {}
         except Exception as e:
-            print(f"Generation error: {e}")
-            print("Attempting alternative generation method...")
-            # Fallback: use full output
-            with torch.no_grad():
-                outputs = self.model.generate(**inputs, max_new_tokens=1024)
-            response = self.processor.decode(outputs[0], skip_special_tokens=True)
-            
-            # Try to extract assistant response
-            if "assistant" in response.lower():
-                parts = response.split("assistant")
-                if len(parts) > 1:
-                    response = parts[-1].strip()
-        
-        print(f"Qwen2-VL Response: {response[:200]}...")
-        
-        # Parse the JSON response
-        piece_map = self._parse_response(response)
-        
-        return piece_map
+            logger.error(f"Error parsing response: {e}")
+            return {}
     
     def _parse_response(self, response: str) -> Dict[str, Dict[str, str]]:
-        """
-        Parse Qwen2-VL's text response into structured piece data.
-        
-        Args:
-            response: Raw text response from Qwen2-VL
-        
-        Returns:
-            Parsed piece dictionary
-        """
+        """Parse the model's response into piece dictionary."""
         try:
-            # Try to extract JSON from response
-            json_match = re.search(r'\{.*\}', response, re.DOTALL)
-            if json_match:
-                json_str = json_match.group()
-                piece_map = json.loads(json_str)
-                return piece_map
-            else:
-                print("Warning: Could not find JSON in response")
-                return self._parse_text_response(response)
-        except json.JSONDecodeError as e:
-            print(f"JSON parsing error: {e}")
+            # Try to find JSON in the response
+            start_idx = response.find('{')
+            end_idx = response.rfind('}') + 1
+            
+            if start_idx >= 0 and end_idx > start_idx:
+                json_str = response[start_idx:end_idx]
+                pieces = json.loads(json_str)
+                
+                # Validate format
+                if isinstance(pieces, dict):
+                    return pieces
+            
+            logger.warning("Could not parse JSON from response, trying text parsing")
+            return self._parse_text_response(response)
+            
+        except json.JSONDecodeError:
+            logger.warning("JSON parsing failed, trying text parsing")
             return self._parse_text_response(response)
     
     def _parse_text_response(self, response: str) -> Dict[str, Dict[str, str]]:
-        """
-        Fallback parser for non-JSON responses.
+        """Fallback text parser if JSON parsing fails."""
+        pieces = {}
+        lines = response.lower().split('\n')
         
-        Args:
-            response: Text response
+        for line in lines:
+            # Look for patterns like "e4: white pawn" or "a1: black rook"
+            for square in ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8',
+                          'b1', 'b2', 'b3', 'b4', 'b5', 'b6', 'b7', 'b8',
+                          'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8',
+                          'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'd8',
+                          'e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'e7', 'e8',
+                          'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8',
+                          'g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8',
+                          'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'h7', 'h8']:
+                if square in line:
+                    for color in ['white', 'black']:
+                        if color in line:
+                            for piece in ['pawn', 'knight', 'bishop', 'rook', 'queen', 'king']:
+                                if piece in line:
+                                    pieces[square] = {"piece": piece, "color": color}
+                                    break
         
-        Returns:
-            Best-effort parsed piece dictionary
-        """
-        piece_map = {}
-        
-        # Look for patterns like "e2: white pawn" or "e2 - white pawn"
-        patterns = [
-            r'([a-h][1-8]):\s*\{?"piece":\s*"(\w+)",\s*"color":\s*"(\w+)"\}?',
-            r'([a-h][1-8]):\s*(\w+)\s+(\w+)',
-            r'([a-h][1-8])\s*[-:]\s*(\w+)\s+(\w+)'
-        ]
-        
-        for pattern in patterns:
-            matches = re.finditer(pattern, response, re.IGNORECASE)
-            for match in matches:
-                if len(match.groups()) == 3:
-                    square = match.group(1).lower()
-                    if 'piece' in pattern:
-                        piece = match.group(2).lower()
-                        color = match.group(3).lower()
-                    else:
-                        color = match.group(2).lower()
-                        piece = match.group(3).lower()
-                    
-                    piece_map[square] = {"piece": piece, "color": color}
-        
-        return piece_map
+        return pieces
 
 
 def recognize_pieces(board_image: np.ndarray, 
                     model_name: str = "Qwen/Qwen2-VL-2B-Instruct",
-                    quantization: str = "4bit") -> Dict[str, Dict[str, str]]:
+                    api_token: Optional[str] = None) -> Dict[str, Dict[str, str]]:
     """
-    Convenience function to recognize pieces.
+    Convenience function to recognize pieces via HF API.
     
     Args:
         board_image: Board image as numpy array
         model_name: Qwen2-VL model to use
-        quantization: "4bit", "8bit", or "none"
+        api_token: HF API token
     
     Returns:
         Piece dictionary
     """
-    recognizer = PieceRecognizer(model_name, quantization)
+    recognizer = PieceRecognizer(model_name, api_token)
     return recognizer.recognize(board_image)
 
 
 if __name__ == "__main__":
     # Test piece recognition
-    print("Testing piece recognition...")
-    # Create a dummy image for testing
-    test_image = np.random.randint(0, 255, (512, 512, 3), dtype=np.uint8)
-    
-    # Note: This will only work with a real chess board image
-    # recognizer = PieceRecognizer()
-    # pieces = recognizer.recognize(test_image)
-    # print(f"Detected pieces: {pieces}")
-    print("Test setup complete. Use with real chess board images.")
+    print("Testing HF API piece recognition...")
+    print("Set HF_API_TOKEN environment variable to test")
+    print("Get token from: https://huggingface.co/settings/tokens")
