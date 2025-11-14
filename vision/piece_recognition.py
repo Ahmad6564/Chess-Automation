@@ -34,9 +34,6 @@ class PieceRecognizer:
         print(f"Loading Qwen2-VL model: {model_name}")
         print(f"Device: {self.device} | Quantization: {quantization}")
         
-        if quantization in ["4bit", "8bit"]:
-            print("First run will download model (~4GB) and may take 2-3 minutes...")
-        
         # Load processor
         self.processor = AutoProcessor.from_pretrained(
             model_name,
@@ -44,19 +41,25 @@ class PieceRecognizer:
         )
         print("✓ Processor loaded")
         
-        # Load model with quantization
-        print("Loading quantized model (much faster than full precision)...")
+        # Load model with appropriate settings based on device
+        print("Loading model...")
         
-        if quantization == "4bit":
-            # 4-bit quantization - fastest, ~1.5GB memory
+        # BitsAndBytes quantization only works on CUDA GPUs
+        if self.device == "cuda" and quantization in ["4bit", "8bit"]:
+            print(f"Using {quantization} quantization on GPU...")
             from transformers import BitsAndBytesConfig
             
-            quantization_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_compute_dtype=torch.float16,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type="nf4"
-            )
+            if quantization == "4bit":
+                quantization_config = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_compute_dtype=torch.float16,
+                    bnb_4bit_use_double_quant=True,
+                    bnb_4bit_quant_type="nf4"
+                )
+            else:  # 8bit
+                quantization_config = BitsAndBytesConfig(
+                    load_in_8bit=True
+                )
             
             self.model = AutoModelForVision2Seq.from_pretrained(
                 model_name,
@@ -64,37 +67,24 @@ class PieceRecognizer:
                 device_map="auto",
                 trust_remote_code=True
             )
-            print("✓ Model loaded with 4-bit quantization (~1.5GB memory)")
-            
-        elif quantization == "8bit":
-            # 8-bit quantization - balanced, ~3GB memory
-            from transformers import BitsAndBytesConfig
-            
-            quantization_config = BitsAndBytesConfig(
-                load_in_8bit=True
-            )
-            
-            self.model = AutoModelForVision2Seq.from_pretrained(
-                model_name,
-                quantization_config=quantization_config,
-                device_map="auto",
-                trust_remote_code=True
-            )
-            print("✓ Model loaded with 8-bit quantization (~3GB memory)")
+            print(f"✓ Model loaded with {quantization} quantization")
             
         else:
-            # No quantization - slowest, most accurate
+            # CPU: Load in float32 (no quantization support on CPU with BitsAndBytes)
+            if self.device == "cpu":
+                print("⚠️  CPU detected: Loading in float32 (quantization requires GPU)")
+                print("   First load will download ~4GB and take 2-3 minutes...")
+                print("   Inference will be slower on CPU. Consider using GPU if available.")
+            
             self.model = AutoModelForVision2Seq.from_pretrained(
                 model_name,
-                torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
-                device_map="auto" if self.device == "cuda" else None,
+                torch_dtype=torch.float32,  # CPU only supports float32
+                low_cpu_mem_usage=True,
                 trust_remote_code=True
             )
             
-            if self.device == "cpu":
-                self.model = self.model.to(self.device)
-            
-            print("✓ Model loaded without quantization (full precision)")
+            self.model = self.model.to(self.device)
+            print(f"✓ Model loaded on {self.device.upper()}")
         
         print(f"✓ Qwen2-VL ready for inference!")
         

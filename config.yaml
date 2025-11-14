@@ -35,7 +35,7 @@ stockfish:
   time_limit: 1.0
 vision_model:
   model_name: Qwen/Qwen2-VL-2B-Instruct
-  quantization: 4bit  # Options: 4bit, 8bit, or none
+  quantization: 4bit  # Options: 4bit, 8bit, or none (quantization only works on GPU)
   target_size:
   - 512
   - 512
