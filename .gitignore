@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Game files
+*.pgn
+positions.txt
+
+# Captured images
+*.png
+*.jpg
+*.jpeg
+!README_images/
+
+# Model cache
+.cache/
+huggingface/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config (if contains sensitive info)
+# config.yaml
+
+# Temporary files
+temp/
+tmp/
+test_capture.png
+chessboard_capture.png

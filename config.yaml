@@ -1,0 +1,66 @@
+# Chess Automation Agent Configuration
+
+# Board capture settings
+board_region:
+  left: 100
+  top: 100
+  width: 800
+  height: 800
+
+# Board orientation ('white' or 'black')
+# white: white pieces at bottom
+# black: black pieces at bottom
+orientation: white
+
+# Chess platform ('desktop' or 'chess.com' or 'lichess')
+chess_platform: desktop
+
+# Stockfish engine settings
+stockfish:
+  path: null  # Will auto-detect if null
+  skill_level: 20  # 0-20, 20 is strongest
+  depth: 15  # Search depth
+  time_limit: 1.0  # Time limit per move in seconds
+
+# LLaVA vision model settings
+vision_model:
+  # Options: 
+  # - llava-hf/llava-v1.6-mistral-7b-hf (smaller, faster)
+  # - llava-hf/llava-v1.6-34b-hf (larger, more accurate)
+  model_name: llava-hf/llava-v1.6-mistral-7b-hf
+  
+  # Target board size for vision processing
+  target_size: [512, 512]
+
+# Humanizer settings (make moves appear human-like)
+humanizer:
+  enabled: true
+  min_delay: 1.0  # Minimum thinking time (seconds)
+  max_delay: 3.5  # Maximum thinking time (seconds)
+  jitter_pixels: 3  # Random pixel jitter for mouse
+  hover_probability: 0.3  # Probability of hovering before click
+  skill_level: 7  # 1-10, affects speed and precision
+
+# Move execution settings
+move_execution:
+  method: drag  # 'drag' or 'click'
+  verify_moves: false  # Visually verify moves (not yet implemented)
+
+# Game loop settings
+game_loop:
+  opponent_move_detection: manual  # 'manual' or 'auto'
+  max_moves: 200  # Maximum moves before stopping
+  save_game: true  # Save game PGN
+  screenshot_moves: false  # Save screenshot after each move
+
+# Logging settings
+logging:
+  level: INFO  # DEBUG, INFO, WARNING, ERROR
+  log_file: null  # Will auto-generate if null
+  console_output: true
+
+# Error handling
+error_handling:
+  max_retries: 3  # Maximum retries for vision/move execution
+  retry_delay: 1.0  # Delay between retries (seconds)
+  abort_on_illegal_move: true  # Stop if illegal move detected

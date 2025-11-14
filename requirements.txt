@@ -1,0 +1,32 @@
+# Chess Automation Agent - Required Dependencies
+
+# Core dependencies
+numpy>=1.24.0
+pillow>=10.0.0
+opencv-python>=4.8.0
+PyYAML>=6.0
+
+# Chess engine
+python-chess>=1.999
+stockfish>=3.28.0
+
+# Vision model (LLaVA)
+torch>=2.0.0
+transformers>=4.35.0
+accelerate>=0.24.0
+
+# Screen capture
+mss>=9.0.0
+
+# GUI automation
+pyautogui>=0.9.54
+pynput>=1.7.6
+
+# Optional: For better performance
+# bitsandbytes>=0.41.0  # For 8-bit model loading
+# xformers>=0.0.22  # For faster attention
+
+# Development tools (optional)
+pytest>=7.4.0
+black>=23.0.0
+flake8>=6.0.0
