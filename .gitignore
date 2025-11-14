@@ -63,3 +63,4 @@ temp/
 tmp/
 test_capture.png
 chessboard_capture.png
+.env
